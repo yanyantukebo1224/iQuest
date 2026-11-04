@@ -81,7 +81,8 @@ static void parse_manifest(const unsigned char *xml, size_t n,
                            char *version, size_t version_cap) {
     if (n < 8 || rd16(xml) != 0x0003) return;
     const unsigned char *p = xml + 8, *end = xml + n;
-    char strings[2048][256];
+    char (*strings)[256] = (char (*)[256])calloc(2048, 256);
+    if (!strings) return;
     unsigned string_count = 0;
     while ((size_t)(end - p) >= 8) {
         uint16_t type = rd16(p);
@@ -115,10 +116,11 @@ static void parse_manifest(const unsigned char *xml, size_t n,
                 if (!strcmp(strings[attr_name], "versionName") && raw < string_count)
                     snprintf(version, version_cap, "%s", strings[raw]);
             }
-            if (*package) return;
+            if (*package) { free(strings); return; }
         }
         p += size;
     }
+    free(strings);
 }
 
 static int extract_manifest(FILE *f, uint32_t local_off, uint16_t method,
