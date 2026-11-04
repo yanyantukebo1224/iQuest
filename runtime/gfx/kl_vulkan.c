@@ -78,6 +78,11 @@ void *kl_vulkan_layer_mtl_texture(int k, int s, int e, int *w, int *h) {
 }
 void  kl_vulkan_layer_rekey(int old_key, int new_key) { (void)old_key; (void)new_key; }
 void  kl_vulkan_capture_eyes(unsigned f, int s) { (void)f; (void)s; }
+// Keep the no-MoltenVK build link-complete: OVRPlugin may reference these
+// diagnostics even when Vulkan is unavailable. No LUID means the GLES path
+// keeps its empty adapter id; layer capture is intentionally a no-op.
+int   kl_vulkan_display_luid(uint8_t out[8]) { (void)out; return 0; }
+void  kl_vulkan_capture_layers(void) {}
 void  kl_vulkan_frame_done(int s) { (void)s; }
 unsigned long long kl_vulkan_frame_serial(void) { return 0; }
 // The OpenXR seam. Answering "not supported" here is what keeps
