@@ -81,7 +81,7 @@ final class ARTrackingModel: NSObject, ObservableObject {
         handStatus = status
     }
 
-    nonisolated func processHands(frame: ARFrame) {
+    func processHands(frame: ARFrame) {
         let timestamp = frame.timestamp
         guard timestamp - lastVisionTimestamp >= 1.0 / 30.0 else { return }
         lastVisionTimestamp = timestamp
@@ -140,7 +140,7 @@ final class ARTrackingModel: NSObject, ObservableObject {
                         count += 1
                     }
                     guard !joints.isEmpty else { return nil }
-                    let side = observation chirality == .left ? "Left" : "Right"
+                    let side = observation.chirality == .left ? "Left" : "Right"
                     return TrackedHand(id: UUID(), chirality: side, joints: joints,
                                        confidence: count > 0 ? confidence / count : 0)
                 }
@@ -176,8 +176,8 @@ extension ARTrackingModel: ARSessionDelegate {
         Task { @MainActor [weak self] in
             self?.update(position: position, orientation: orientation,
                          tracking: tracking, timestamp: timestamp)
+            self?.processHands(frame: frame)
         }
-        processHands(frame: frame)
     }
 
     nonisolated func session(_ session: ARSession, didFailWithError error: Error) {
