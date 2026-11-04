@@ -42,8 +42,7 @@ targets:
           - "$(SRCROOT)/../runtime/media"
           - "$(SRCROOT)/../runtime/guest"
           - "$(SRCROOT)/../visionos/Sources"
-        OTHER_CFLAGS: "$(inherited) -Wno-unused-parameter"
-        OTHER_ASFLAGS: "$(inherited) -I$(SRCROOT)/.."
+        OTHER_CFLAGS: "$(inherited) -Wno-unused-parameter -DIQUEST_IOS_BUILD=1"
         CODE_SIGN_STYLE: Automatic
         SWIFT_STRICT_CONCURRENCY: minimal
     dependencies:
