@@ -90,6 +90,32 @@ struct GameLauncherView: View {
                                         .foregroundStyle(.secondary)
                                 }
                             }
+
+                            if let info = library.inspection {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Label("APK analysis", systemImage: "doc.text.magnifyingglass")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.cyan)
+                                    Text(info.packageName)
+                                        .font(.caption.monospaced())
+                                        .textSelection(.enabled)
+                                    Text("\(info.engineHint) · \(info.formattedSize)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Text("ARM64 libraries: \(info.arm64Libraries.count) · Assets: \(info.assetFileCount)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    if !info.arm64Libraries.isEmpty {
+                                        Text(info.arm64Libraries.prefix(8).joined(separator: "  ·  "))
+                                            .font(.caption2.monospaced())
+                                            .foregroundStyle(.secondary)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                }
+                                .padding(12)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(.black.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+                            }
                         } else {
                             ContentUnavailableView(
                                 "No games yet",
