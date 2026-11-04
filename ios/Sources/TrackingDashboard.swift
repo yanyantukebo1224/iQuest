@@ -1,151 +1,159 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
-struct TrackingDashboard: View {
-    @StateObject private var tracking = ARTrackingModel()
-    @StateObject private var controller = ControllerInputModel()
+struct GameLauncherView: View {
+    @StateObject private var library = GameLibraryModel()
+    @State private var isImporterPresented = false
+
+    private var apkType: UTType {
+        UTType(filenameExtension: "apk") ?? .data
+    }
 
     var body: some View {
         ZStack {
-            ARPassthroughView(session: tracking.session)
-                .ignoresSafeArea()
+            LinearGradient(
+                colors: [Color(red: 0.035, green: 0.045, blue: 0.075),
+                         Color(red: 0.075, green: 0.085, blue: 0.14)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
 
-            VStack(spacing: 12) {
-                HStack {
+            VStack(spacing: 0) {
+                HStack(alignment: .center, spacing: 12) {
+                    Image(systemName: "visionpro")
+                        .font(.system(size: 30, weight: .medium))
+                        .foregroundStyle(.cyan)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("iQuest").font(.title.bold())
-                        Text("MR · HAND TRACKING · QUEST RUNTIME")
-                            .font(.caption2.weight(.semibold))
+                        Text("iQuest")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                        Text("QUEST GAME LIBRARY")
+                            .font(.caption2.weight(.bold))
+                            .tracking(2.2)
                             .foregroundStyle(.cyan)
                     }
                     Spacer()
                     Circle()
-                        .fill(tracking.status.contains("normal") ? .green : .orange)
-                        .frame(width: 9, height: 9)
-                    Text(tracking.status)
-                        .font(.caption.weight(.medium))
-                        .lineLimit(1)
+                        .fill(.orange)
+                        .frame(width: 8, height: 8)
+                    Text("RUNTIME SETUP")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
                 }
-                .padding(12)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                .padding(.bottom, 30)
 
-                HStack(alignment: .top, spacing: 12) {
-                    handPanel
-                    controllerPanel
+                HStack(alignment: .center, spacing: 36) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        Text("Your Quest games,\non iPhone.")
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("Import an Android Quest APK to add it to your local library. Games will run on-device when the Klepton iOS runtime is connected.")
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.68))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: 390, alignment: .leading)
+
+                        Button {
+                            isImporterPresented = true
+                        } label: {
+                            Label("Import Quest APK", systemImage: "plus.app")
+                                .font(.headline)
+                                .frame(minWidth: 220)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.cyan)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Label("Selected game", systemImage: "gamecontroller")
+                                .font(.headline)
+                            Spacer()
+                            if library.selectedAPK != nil {
+                                Button("Remove", role: .destructive) {
+                                    library.clearSelection()
+                                }
+                                .font(.caption)
+                            }
+                        }
+
+                        if let apk = library.selectedAPK {
+                            HStack(spacing: 12) {
+                                Image(systemName: "shippingbox.fill")
+                                    .font(.system(size: 28))
+                                    .foregroundStyle(.cyan)
+                                    .frame(width: 54, height: 54)
+                                    .background(.cyan.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(apk.deletingPathExtension().lastPathComponent)
+                                        .font(.headline)
+                                        .lineLimit(1)
+                                    Text("Android package · APK")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        } else {
+                            ContentUnavailableView(
+                                "No games yet",
+                                systemImage: "square.stack.3d.up",
+                                description: Text("Import a Quest APK to get started.")
+                            )
+                            .frame(minHeight: 130)
+                        }
+
+                        Divider().overlay(.white.opacity(0.12))
+
+                        Button {
+                            library.requestLaunch()
+                        } label: {
+                            Label("Start game", systemImage: "play.fill")
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.green)
+                        .disabled(library.selectedAPK == nil)
+
+                        Text(library.status)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("Guest execution is not available in this build yet.")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.orange)
+                    }
+                    .padding(20)
+                    .frame(maxWidth: 380, minHeight: 290, alignment: .topLeading)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22))
                 }
-
-                posePanel
-
-                Spacer()
+                .frame(maxHeight: .infinity)
 
                 HStack {
-                    Text("MR PASSTHROUGH ACTIVE")
-                        .font(.caption2.bold())
-                        .foregroundStyle(.cyan)
+                    Text("LOCAL ONLY")
                     Spacer()
-                    Text("AR frames: \(tracking.frameCount)")
-                        .font(.caption2.monospacedDigit())
+                    Text("iOS · ARM64")
                 }
-                .padding(12)
-                .background(.ultraThinMaterial, in: Capsule())
+                .font(.caption2.weight(.bold))
+                .tracking(1.5)
+                .foregroundStyle(.white.opacity(0.35))
+                .padding(.top, 22)
             }
-            .padding()
+            .padding(.horizontal, 34)
+            .padding(.vertical, 26)
         }
         .preferredColorScheme(.dark)
-        .onAppear { tracking.start() }
-        .onDisappear { tracking.stop() }
-    }
-
-    private var posePanel: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Label("Head / Device 6DoF", systemImage: "move.3d")
-                    .font(.headline)
-                Spacer()
-                Button("Recenter") { tracking.reset() }
-                    .font(.caption.weight(.semibold))
-                    .buttonStyle(.bordered)
-                    .tint(.cyan)
-            }
-            let p = tracking.position
-            let q = tracking.orientation
-            Text(String(format: "Position  X %+.3f  Y %+.3f  Z %+.3f m", p.x, p.y, p.z))
-                .font(.system(size: 11, design: .monospaced))
-            Text(String(format: "Rotation  X %+.3f  Y %+.3f  Z %+.3f  W %+.3f", q.vector.x, q.vector.y, q.vector.z, q.vector.w))
-                .font(.system(size: 11, design: .monospaced))
-            Text("ARKit world-space camera pose · 3 translational + 3 rotational degrees")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-    }
-
-    private var handPanel: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("3D Finger Tracking", systemImage: "hand.draw")
-                .font(.headline)
-            Text(tracking.handStatus)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            if tracking.hands.isEmpty {
-                Text("Show your hands to the rear camera")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(tracking.hands) { hand in
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack {
-                            Text(hand.chirality)
-                            Spacer()
-                            Text("\(Int(hand.confidence * 100))%")
-                        }
-                        .font(.caption.bold())
-                        Text("\(hand.joints.count)/21 joints")
-                            .font(.caption2.monospaced())
-                        if let wrist = hand.joints["wrist"] {
-                            Text(String(format: "Wrist %.2f / %.2f / %.2f m", wrist.x, wrist.y, wrist.z))
-                                .font(.system(size: 9, design: .monospaced))
-                        }
-                    }
-                }
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-    }
-
-    private var controllerPanel: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Controller Bridge", systemImage: "gamecontroller")
-                .font(.headline)
-            Text(controller.status)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(controller.controllerName)
-                .font(.caption.bold())
-            stickRow("Left stick", controller.leftStick)
-            stickRow("Right stick", controller.rightStick)
-            Text(controller.pressedButtons.sorted().joined(separator: " · ").isEmpty
-                 ? "No buttons pressed"
-                 : controller.pressedButtons.sorted().joined(separator: " · "))
-                .font(.caption2.monospaced())
-                .lineLimit(3)
-            Text("Controller IMU intentionally unused")
-                .font(.caption2)
-                .foregroundStyle(.cyan)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-    }
-
-    private func stickRow(_ label: String, _ value: SIMD2<Float>) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(.caption2).foregroundStyle(.secondary)
-            Text(String(format: "X %+.2f  Y %+.2f", value.x, value.y))
-                .font(.system(size: 10, design: .monospaced))
+        .statusBarHidden()
+        .fileImporter(
+            isPresented: $isImporterPresented,
+            allowedContentTypes: [apkType],
+            allowsMultipleSelection: false
+        ) { result in
+            library.importAPK(result)
         }
     }
 }
