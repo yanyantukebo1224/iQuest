@@ -3,6 +3,7 @@ import UniformTypeIdentifiers
 import UIKit
 
 struct APKDocumentPicker: UIViewControllerRepresentable {
+    @Binding var isPresented: Bool
     let onPick: (URL) -> Void
     let onCancel: () -> Void
 
@@ -21,10 +22,12 @@ struct APKDocumentPicker: UIViewControllerRepresentable {
         return picker
     }
 
-    func updateUIViewController(_ controller: UIDocumentPickerViewController, context: Context) {}
+    func updateUIViewController(_ controller: UIDocumentPickerViewController, context: Context) {
+        context.coordinator.parent = self
+    }
 
     final class Coordinator: NSObject, UIDocumentPickerDelegate {
-        private let parent: APKDocumentPicker
+        var parent: APKDocumentPicker
 
         init(parent: APKDocumentPicker) {
             self.parent = parent
@@ -32,13 +35,16 @@ struct APKDocumentPicker: UIViewControllerRepresentable {
 
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
             guard let url = urls.first else {
+                parent.isPresented = false
                 parent.onCancel()
                 return
             }
+            parent.isPresented = false
             parent.onPick(url)
         }
 
         func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            parent.isPresented = false
             parent.onCancel()
         }
     }
