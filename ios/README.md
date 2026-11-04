@@ -1,22 +1,40 @@
 # iQuest iOS bring-up (iPhone 16e)
 
-This directory is the first iOS-native milestone for the Klepton port. It is deliberately a small, independently buildable ARKit app rather than a claim that the Quest runtime has already been ported.
+This is the iOS-native frontend and hardware-input bring-up for the iQuest/Klepton port. The current branch adds an ARKit camera passthrough scene, Vision hand landmarks, a monocular 3D hand-position estimate, and a GameController input bridge.
 
-## What this milestone does
+## Implemented in this milestone
 
-- Builds as an iOS 18+ ARM64 app.
-- Starts `ARWorldTrackingConfiguration` and reads the AR camera's 6DoF transform.
-- Displays position, quaternion orientation, tracking state and frame count.
-- Requires no JIT and does not generate executable code at runtime.
+- iOS 18+ ARM64 app scaffold.
+- ARKit world tracking and camera 6DoF pose.
+- ARSCNView camera passthrough with a world-locked demo object.
+- Vision `VNDetectHumanHandPoseRequest` for up to two hands and the 21 standard hand landmarks.
+- Approximate world-space joint coordinates using camera intrinsics and an estimated palm-width depth.
+- GameController extended-gamepad button and stick input.
+- Controller IMU data is not read or used.
 
-## What it does not do yet
+## Important tracking limitation
 
-- It does not load APKs or Android `.so` files.
-- It does not link `libklepton` or the current visionOS frontend.
-- It does not implement a stereoscopic headset compositor.
-- It does not implement OpenXR, OVRP, hand tracking, or passthrough composition.
+Vision supplies 2D image landmarks, not true per-joint depth. The current 3D reconstruction estimates one depth per hand from an assumed palm width and projects the 2D joints through the AR camera intrinsics. It is a working prototype, not Quest-grade 3D hand tracking. Occlusion, hand rotation, unusual hand sizes, lighting, and motion blur affect accuracy. The iPhone 16e has no LiDAR, so this app does not claim sensor-based hand depth or Quest 3-style depth-aware passthrough.
 
-Those are separate porting milestones. In particular, the current Klepton Swift frontend imports `CompositorServices`, and its eye compositor is built around `LayerRenderer`; that is a visionOS-specific frontend and cannot simply be compiled for iOS.
+The camera passthrough is a single rear-camera view. It is not true stereo passthrough, and it does not reproduce Quest 3's stereo/depth occlusion. The current demo sphere is a world-locked MR composition test.
+
+## Controller scope
+
+The app listens for GameController devices that expose an extended gamepad profile. It forwards sticks, face buttons, shoulders, triggers, menu/options/home and D-pad states. It does not yet emulate Touch controller-specific haptics, capacitive touch sensors, per-controller pose tracking, or a complete Android input-device API. Joy-Con compatibility must be verified on the actual paired devices and iOS version.
+
+Controller position and orientation are intended to come from camera-based hand tracking, never from the Joy-Con IMU. That pose-to-Quest-input bridge is not yet connected to the native guest runtime.
+
+## Not implemented yet
+
+- Quest APK ingestion, Android package/resource handling, and guest lifecycle.
+- Embedding and loading the translated guest frameworks in the iOS app.
+- A complete iOS port of Klepton's C runtime and its platform shims.
+- GLES/ANGLE and Vulkan/MoltenVK device integration.
+- OpenXR session/swapchain integration and the full OVRP compatibility surface.
+- Touch-controller pose/action emulation and haptics.
+- A production-quality 3D hand reconstruction, occlusion handling, and gesture-to-OpenXR action mapping.
+
+The existing Klepton runtime is primarily built and validated for macOS and visionOS. Its current visionOS frontend depends on CompositorServices and cannot simply be compiled as an iOS frontend. The iOS port requires a separate compositor and platform layer.
 
 ## Build on macOS
 
@@ -40,19 +58,8 @@ xcodebuild -project ios/iQuest.xcodeproj \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-The GitHub Actions workflow performs the same unsigned device-SDK build. It is a compile artifact, not an installable signed IPA. Sign the resulting app with a certificate/profile appropriate to your own device before installation.
-
-## Offline guest-library translation (macOS host)
-
-The upstream `klepton-ld` already accepts `--platform ios` (minimum iOS 17.0). After unpacking a legally obtained target APK into the directory expected by `visionos/targets.py`, translate its native libraries with:
-
-```bash
-make build/klepton-ld
-KLEPTON_TARGET=<target-name> ios/mkguest.sh
-```
-
-This writes iOS-stamped `.framework` bundles under `ios/Frameworks/<target>/`. They are not yet embedded into the app target by this scaffold; the next porting step is to generate Xcode embed/sign phases and connect the runtime's bundle lookup to that directory.
+The GitHub Actions workflow builds an unsigned device app. A signed build and valid provisioning profile are required for installation on a physical iPhone.
 
 ## Device test
 
-Install a signed build on iPhone 16e, grant camera permission, and check that `Tracking: normal` appears after looking around a textured, well-lit room. The app reports ARKit's camera pose; it does not claim headset-grade tracking or optical hand tracking.
+Install a signed build on iPhone 16e and grant camera permission. In a textured, well-lit room, verify that ARKit reaches `Tracking: normal`. Move one or both hands in front of the rear camera and check whether the dashboard reports hand detections and joint counts. Pair a supported controller in iOS Settings and check button/stick updates. The UI is a bring-up diagnostic, not yet a game launcher or a finished headset interface.
