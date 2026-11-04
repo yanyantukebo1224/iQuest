@@ -44,7 +44,7 @@ targets:
           - "$(SRCROOT)/../runtime/guest"
           - "$(SRCROOT)/../runtime/diag"
           - "$(SRCROOT)/../visionos/Sources"
-        OTHER_CFLAGS: "$(inherited) -Wno-unused-parameter -DIQUEST_IOS_BUILD=1"
+        OTHER_CFLAGS: "$(inherited) -Wno-unused-parameter -DIQUEST_IOS_BUILD=1 -DKL_TARGET_DEFAULT=\\\"beatsaber\\\""
         CODE_SIGN_STYLE: Automatic
         SWIFT_STRICT_CONCURRENCY: minimal
     dependencies:
