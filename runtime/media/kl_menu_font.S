@@ -15,10 +15,15 @@
 // build INPUT (like runtime/data/phonon_hrtf_cipic_124.sofa) so a bare checkout
 // still compiles; .incbin rather than a C table so `make check` does not parse a
 // multi-MB source. The path is relative to the repo root, where make runs.
+// Xcode's iOS target builds from ios/, so use the corresponding relative path.
 .section __DATA,__const
 .globl _kl_menu_font
 .globl _kl_menu_font_end
 .align 4
 _kl_menu_font:
+#ifdef IQUEST_IOS_BUILD
+.incbin "../runtime/data/kl_menu_font.ttf"
+#else
 .incbin "runtime/data/kl_menu_font.ttf"
+#endif
 _kl_menu_font_end:
