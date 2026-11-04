@@ -92,7 +92,7 @@ static void parse_manifest(const unsigned char *xml, size_t n,
         if (type == 0x0001 && size >= 28) {
             uint32_t count = rd32(p + 8);
             string_count = count < 2048 ? count : 2048;
-            memset(strings, 0, sizeof strings);
+            memset(strings, 0, 2048u * 256u);
             for (unsigned i = 0; i < string_count; i++)
                 axml_string(p, size, i, strings[i], sizeof strings[i]);
         } else if (type == 0x0102 && size >= 36 && string_count) {
