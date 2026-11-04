@@ -1255,15 +1255,50 @@ trace: build/t_trace
 	@./build/t_trace
 
 # ---- iOS bring-up (iQuest 16e) ----
-# This currently builds the ARKit 6DoF proof-of-concept app in ios/. It does
-# NOT yet build the Klepton guest runtime or claim Quest APK compatibility.
-.PHONY: ios-project ios
+# The current iOS app is an ARKit tracking proof of concept. It does not yet
+# link the Klepton guest runtime or claim Quest APK compatibility.
+#
+# The unsigned IPA is intentionally suitable for a user-controlled re-signing
+# workflow (for example, ESign). It is NOT installable as-is: iOS requires a
+# valid signature and provisioning appropriate to the device.
+IOS_DERIVED_DATA := build/ios/DerivedData
+IOS_APP := $(IOS_DERIVED_DATA)/Build/Products/Release-iphoneos/iQuest.app
+IOS_IPA := build/ios/iQuest-unsigned.ipa
+
+.PHONY: ios-project ios ios-ipa ios-verify-ipa
 
 ios-project:
-	@command -v xcodegen >/dev/null || { echo "xcodegen is required: brew install xcodegen"; exit 1; }
+	@command -v xcodegen >/dev/null || { echo "xcodegen is required (install XcodeGen on the build host)"; exit 1; }
 	xcodegen generate --spec ios/project.yml --project ios
 
 ios: ios-project
 	xcodebuild -project ios/iQuest.xcodeproj -scheme iQuest -sdk iphoneos \
 	  -configuration Release -destination 'generic/platform=iOS' \
-	  -derivedDataPath build/ios/DerivedData CODE_SIGNING_ALLOWED=NO build
+	  -derivedDataPath $(IOS_DERIVED_DATA) CODE_SIGNING_ALLOWED=NO build
+
+# Package the device .app into the standard IPA Payload layout. The package is
+# unsigned by design; ESign or another trusted signer must sign it before use.
+ios-ipa: ios
+	@rm -rf build/ios/package
+	@mkdir -p build/ios/package/Payload
+	@ditto "$(IOS_APP)" build/ios/package/Payload/iQuest.app
+	@mkdir -p "$(dir $(IOS_IPA))"
+	@cd build/ios/package && /usr/bin/zip -qry "$(abspath $(IOS_IPA))" Payload
+	@$(MAKE) --no-print-directory ios-verify-ipa
+
+# Structural gate: a valid ZIP, the expected IPA layout, an iPhoneOS bundle,
+# a present executable, and an arm64 device slice. This does not replace a
+# physical-device launch test or prove ARKit tracking works on hardware.
+ios-verify-ipa:
+	@test -f "$(IOS_IPA)" || { echo "missing IPA: $(IOS_IPA)"; exit 1; }
+	@unzip -t "$(IOS_IPA)" >/dev/null
+	@unzip -Z1 "$(IOS_IPA)" | grep -qx 'Payload/iQuest.app/Info.plist'
+	@PLIST="$(IOS_APP)/Info.plist"; \
+	  EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$PLIST") || exit 1; \
+	  test -f "$(IOS_APP)/$EXECUTABLE" || { echo "missing app executable: $EXECUTABLE"; exit 1; }; \
+	  PLATFORM=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$PLIST") || exit 1; \
+	  test "$PLATFORM" = "iPhoneOS" || { echo "wrong platform: $PLATFORM"; exit 1; }; \
+	  ARCHS=$(/usr/bin/lipo -archs "$(IOS_APP)/$EXECUTABLE") || exit 1; \
+	  echo "  IPA executable architectures: $ARCHS"; \
+	  echo "$ARCHS" | tr ' ' '\\n' | grep -qx arm64 || { echo "missing arm64 device slice"; exit 1; }
+	@echo "  verified unsigned iPhone IPA: $(IOS_IPA)"
