@@ -144,6 +144,7 @@ struct GameLauncherView: View {
         .preferredColorScheme(.dark)
         .sheet(isPresented: $isImporterPresented) {
             APKDocumentPicker(
+                isPresented: $isImporterPresented,
                 onPick: { url in library.importAPK(from: url) },
                 onCancel: { library.statusMessage("File selection cancelled.") }
             )
