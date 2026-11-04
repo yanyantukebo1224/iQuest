@@ -65,6 +65,7 @@ targets:
       - sdk: CoreAudio.framework
       - sdk: Metal.framework
       - sdk: QuartzCore.framework
+      - sdk: libz.tbd
 
 schemes:
   iQuest:
