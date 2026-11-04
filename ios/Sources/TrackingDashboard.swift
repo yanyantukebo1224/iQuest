@@ -33,6 +33,8 @@ struct TrackingDashboard: View {
                     controllerPanel
                 }
 
+                posePanel
+
                 Spacer()
 
                 HStack {
@@ -51,6 +53,32 @@ struct TrackingDashboard: View {
         .preferredColorScheme(.dark)
         .onAppear { tracking.start() }
         .onDisappear { tracking.stop() }
+    }
+
+    private var posePanel: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Label("Head / Device 6DoF", systemImage: "move.3d")
+                    .font(.headline)
+                Spacer()
+                Button("Recenter") { tracking.reset() }
+                    .font(.caption.weight(.semibold))
+                    .buttonStyle(.bordered)
+                    .tint(.cyan)
+            }
+            let p = tracking.position
+            let q = tracking.orientation
+            Text(String(format: "Position  X %+.3f  Y %+.3f  Z %+.3f m", p.x, p.y, p.z))
+                .font(.system(size: 11, design: .monospaced))
+            Text(String(format: "Rotation  X %+.3f  Y %+.3f  Z %+.3f  W %+.3f", q.vector.x, q.vector.y, q.vector.z, q.vector.w))
+                .font(.system(size: 11, design: .monospaced))
+            Text("ARKit world-space camera pose · 3 translational + 3 rotational degrees")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
 
     private var handPanel: some View {
