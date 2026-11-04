@@ -142,13 +142,13 @@ struct GameLauncherView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .sheet(isPresented: $isImporterPresented) {
+        .background {
             APKDocumentPicker(
                 isPresented: $isImporterPresented,
                 onPick: { url in library.importAPK(from: url) },
                 onCancel: { library.statusMessage("File selection cancelled.") }
             )
-            .ignoresSafeArea()
+            .frame(width: 1, height: 1)
         }
     }
 }
