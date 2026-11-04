@@ -1,5 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct GameLauncherView: View {
     @StateObject private var library = GameLibraryModel()
@@ -49,6 +48,7 @@ struct GameLauncherView: View {
                             .fixedSize(horizontal: false, vertical: true)
 
                         Button {
+                            library.statusMessage("Opening file picker…")
                             isImporterPresented = true
                         } label: {
                             Label("Import Quest APK", systemImage: "plus.app")
@@ -142,12 +142,12 @@ struct GameLauncherView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .fileImporter(
-            isPresented: $isImporterPresented,
-            allowedContentTypes: [.item],
-            allowsMultipleSelection: false
-        ) { result in
-            library.importAPK(result)
+        .sheet(isPresented: $isImporterPresented) {
+            APKDocumentPicker(
+                onPick: { url in library.importAPK(from: url) },
+                onCancel: { library.statusMessage("File selection cancelled.") }
+            )
+            .ignoresSafeArea()
         }
     }
 }
