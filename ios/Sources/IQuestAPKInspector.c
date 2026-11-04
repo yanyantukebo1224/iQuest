@@ -109,12 +109,16 @@ static void parse_manifest(const unsigned char *xml, size_t n,
                 size_t at = base + (size_t)i * attr_size;
                 if (at + 20 > size) break;
                 uint32_t attr_name = rd32(p + at + 4);
-                uint32_t raw = rd32(p + at + 8);
+                uint32_t value = rd32(p + at + 8);
                 if (attr_name >= string_count) continue;
-                if (!strcmp(strings[attr_name], "package") && raw < string_count)
-                    snprintf(package, package_cap, "%s", strings[raw]);
-                if (!strcmp(strings[attr_name], "versionName") && raw < string_count)
-                    snprintf(version, version_cap, "%s", strings[raw]);
+                // Some AXML writers omit rawValue and keep the string only
+                // in the typed-value payload (TYPE_STRING = 0x03).
+                if (value == 0xffffffffu && p[at + 15] == 0x03)
+                    value = rd32(p + at + 16);
+                if (!strcmp(strings[attr_name], "package") && value < string_count)
+                    snprintf(package, package_cap, "%s", strings[value]);
+                if (!strcmp(strings[attr_name], "versionName") && value < string_count)
+                    snprintf(version, version_cap, "%s", strings[value]);
             }
             if (*package) { free(strings); return; }
         }
