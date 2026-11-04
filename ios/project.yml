@@ -21,13 +21,16 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: dev.iquest.iphone16e
         PRODUCT_NAME: iQuest
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_NSCameraUsageDescription: "iQuest uses the rear camera for ARKit world tracking and head-pose estimation."
+        INFOPLIST_KEY_NSCameraUsageDescription: "iQuest uses the rear camera for MR passthrough, ARKit world tracking and hand tracking."
         INFOPLIST_KEY_UIRequiresFullScreen: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         CODE_SIGN_STYLE: Automatic
         SWIFT_STRICT_CONCURRENCY: minimal
     dependencies:
       - sdk: ARKit.framework
+      - sdk: SceneKit.framework
+      - sdk: Vision.framework
+      - sdk: GameController.framework
       - sdk: SwiftUI.framework
       - sdk: UIKit.framework
 
