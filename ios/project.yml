@@ -16,20 +16,56 @@ targets:
     platform: iOS
     sources:
       - path: Sources
+      - path: ../runtime
+        excludes:
+          - diag/**
+          - data/**
+          - gfx/kl_view.c
+          - gfx/kl_view_mtl.m
+      - path: ../runtime/diag/kl_mprobe.c
+      - path: ../visionos/Sources/kl_app.c
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.iquest.iphone16e
         PRODUCT_NAME: iQuest
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_NSCameraUsageDescription: "iQuest uses the rear camera for ARKit world tracking and head-pose estimation."
+        INFOPLIST_KEY_NSCameraUsageDescription: "iQuest uses the rear camera for MR passthrough, ARKit world tracking and hand tracking."
         INFOPLIST_KEY_UIRequiresFullScreen: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        SWIFT_OBJC_BRIDGING_HEADER: Sources/Klepton-Bridging-Header.h
+        HEADER_SEARCH_PATHS:
+          - "$(inherited)"
+          - "$(SRCROOT)/../runtime"
+          - "$(SRCROOT)/../runtime/jni"
+          - "$(SRCROOT)/../runtime/libc"
+          - "$(SRCROOT)/../runtime/gfx"
+          - "$(SRCROOT)/../runtime/xr"
+          - "$(SRCROOT)/../runtime/media"
+          - "$(SRCROOT)/../runtime/guest"
+          - "$(SRCROOT)/../runtime/diag"
+          - "$(SRCROOT)/../visionos/Sources"
+        OTHER_CFLAGS: "$(inherited) -Wno-unused-parameter -DIQUEST_IOS_BUILD=1 -DKL_TARGET_DEFAULT=\\\"beatsaber\\\""
         CODE_SIGN_STYLE: Automatic
         SWIFT_STRICT_CONCURRENCY: minimal
     dependencies:
       - sdk: ARKit.framework
+      - sdk: SceneKit.framework
+      - sdk: Vision.framework
+      - sdk: GameController.framework
       - sdk: SwiftUI.framework
       - sdk: UIKit.framework
+      - sdk: Foundation.framework
+      - sdk: AudioToolbox.framework
+      - sdk: VideoToolbox.framework
+      - sdk: CoreMedia.framework
+      - sdk: CoreVideo.framework
+      - sdk: IOSurface.framework
+      - sdk: CoreFoundation.framework
+      - sdk: AVFoundation.framework
+      - sdk: CoreAudio.framework
+      - sdk: Metal.framework
+      - sdk: QuartzCore.framework
+      - sdk: libz.tbd
 
 schemes:
   iQuest:

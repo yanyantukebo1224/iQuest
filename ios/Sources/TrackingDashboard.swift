@@ -1,94 +1,237 @@
 import SwiftUI
 
-struct TrackingDashboard: View {
-    @StateObject private var tracking = ARTrackingModel()
+struct GameLauncherView: View {
+    @StateObject private var library = GameLibraryModel()
+    @State private var isImporterPresented = false
 
     var body: some View {
-        NavigationStack {
+        ZStack {
+            LinearGradient(
+                colors: [Color(red: 0.035, green: 0.045, blue: 0.075),
+                         Color(red: 0.075, green: 0.085, blue: 0.14)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("iQuest 16e")
-                            .font(.largeTitle.bold())
-                        Text("Native ARKit tracking proof of concept")
-                            .font(.subheadline)
+                VStack(alignment: .leading, spacing: 24) {
+                    HStack(alignment: .center, spacing: 12) {
+                        Image(systemName: "visionpro")
+                            .font(.system(size: 30, weight: .medium))
+                            .foregroundStyle(.cyan)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("iQuest")
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                            Text("QUEST GAME LIBRARY")
+                                .font(.caption2.weight(.bold))
+                                .tracking(2.2)
+                                .foregroundStyle(.cyan)
+                        }
+                        Spacer(minLength: 8)
+                        Circle()
+                            .fill(.orange)
+                            .frame(width: 8, height: 8)
+                        Text("RUNTIME SETUP")
+                            .font(.caption2.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
 
-                    HStack(spacing: 10) {
-                        Circle()
-                            .fill(tracking.status.contains("normal") ? .green : .orange)
-                            .frame(width: 10, height: 10)
-                        Text(tracking.status)
-                            .font(.headline)
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Your Quest games, on iPhone.")
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .fixedSize(horizontal: false, vertical: true)
 
-                    GroupBox("6DoF pose — camera in AR world") {
-                        VStack(alignment: .leading, spacing: 10) {
-                            vectorRow("X", tracking.position.x)
-                            vectorRow("Y", tracking.position.y)
-                            vectorRow("Z", tracking.position.z)
-                            Divider()
-                            vectorRow("Quaternion X", tracking.orientation.vector.x)
-                            vectorRow("Quaternion Y", tracking.orientation.vector.y)
-                            vectorRow("Quaternion Z", tracking.orientation.vector.z)
-                            vectorRow("Quaternion W", tracking.orientation.vector.w)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+                        Text("Import an Android Quest APK to add it to your local library. Games will run on-device when the Klepton iOS runtime is connected.")
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.68))
+                            .fixedSize(horizontal: false, vertical: true)
 
-                    GroupBox("Runtime diagnostics") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            diagnostic("AR frames", "\(tracking.frameCount)")
-                            diagnostic("Last AR timestamp", String(format: "%.3f s", tracking.lastFrameTime))
-                            diagnostic("Device target", "iPhone 16e / arm64")
-                            diagnostic("JIT", "Not required by this prototype")
-                        }
-                    }
-
-                    HStack {
-                        Button(tracking.isRunning ? "Pause tracking" : "Start tracking") {
-                            tracking.isRunning ? tracking.stop() : tracking.start()
+                        Button {
+                            library.statusMessage("Opening file picker…")
+                            isImporterPresented = true
+                        } label: {
+                            Label("Import Quest APK", systemImage: "plus.app")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 9)
                         }
                         .buttonStyle(.borderedProminent)
-                        Button("Reset") { tracking.reset() }
-                            .buttonStyle(.bordered)
+                        .tint(.cyan)
                     }
 
-                    Text("This milestone verifies ARKit world tracking only. It does not yet load Android APKs, run Quest games, provide stereo VR output, or implement OpenXR/OVRP compatibility.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Label("Selected game", systemImage: "gamecontroller")
+                                .font(.headline)
+                            Spacer()
+                            if library.selectedAPK != nil {
+                                Button("Remove", role: .destructive) {
+                                    library.clearSelection()
+                                }
+                                .font(.caption)
+                            }
+                        }
+
+                        if let apk = library.selectedAPK {
+                            HStack(spacing: 12) {
+                                Image(systemName: "shippingbox.fill")
+                                    .font(.system(size: 28))
+                                    .foregroundStyle(.cyan)
+                                    .frame(width: 54, height: 54)
+                                    .background(.cyan.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(apk.lastPathComponent)
+                                        .font(.headline)
+                                        .lineLimit(2)
+                                        .textSelection(.enabled)
+                                    Text("Copied into iQuest · Android APK")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+
+                            if let info = library.inspection {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Label("APK analysis", systemImage: "doc.text.magnifyingglass")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.cyan)
+                                    Text(info.packageName)
+                                        .font(.caption.monospaced())
+                                        .textSelection(.enabled)
+                                    Text("\(info.engineHint) · \(info.formattedSize)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Text("ARM64 libraries: \(info.arm64Libraries.count) · Assets: \(info.assetFileCount)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    if !info.arm64Libraries.isEmpty {
+                                        Text(info.arm64Libraries.prefix(8).joined(separator: "  ·  "))
+                                            .font(.caption2.monospaced())
+                                            .foregroundStyle(.secondary)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                }
+                                .padding(12)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(.black.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+                            }
+                        } else {
+                            ContentUnavailableView(
+                                "No games yet",
+                                systemImage: "square.stack.3d.up",
+                                description: Text("Choose an .apk file using the import button.")
+                            )
+                            .frame(minHeight: 130)
+                        }
+
+                        Divider().overlay(.white.opacity(0.12))
+
+                        Button {
+                            library.requestLaunch()
+                        } label: {
+                            Label("Start game", systemImage: "play.fill")
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.green)
+                        .disabled(library.selectedAPK == nil)
+
+                        Text(library.status)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Text("Guest execution is not available in this build yet.")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.orange)
+                    }
+                    .padding(20)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22))
+
+                    Quest3CompatibilitySection()
+
+                    HStack {
+                        Text("LOCAL ONLY")
+                        Spacer()
+                        Text("iOS · ARM64")
+                    }
+                    .font(.caption2.weight(.bold))
+                    .tracking(1.5)
+                    .foregroundStyle(.white.opacity(0.35))
                 }
-                .padding()
+                .padding(.horizontal, 22)
+                .padding(.vertical, 26)
+                .frame(maxWidth: 560)
+                .frame(maxWidth: .infinity)
             }
-            .navigationTitle("iQuest")
-            .navigationBarTitleDisplayMode(.inline)
-            .onAppear { tracking.start() }
-            .onDisappear { tracking.stop() }
         }
         .preferredColorScheme(.dark)
+        .background {
+            APKDocumentPicker(
+                isPresented: $isImporterPresented,
+                onPick: { url in library.importAPK(from: url) },
+                onCancel: { library.statusMessage("File selection cancelled.") }
+            )
+            .frame(width: 1, height: 1)
+        }
+    }
+}
+
+
+private struct Quest3CompatibilitySection: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label("Quest 3 API compatibility", systemImage: "arkit")
+                    .font(.headline)
+                Spacer()
+                Text(Quest3CompatibilityProfile.summary)
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.secondary)
+            }
+            Text("Host capability map · not a Meta Quest runtime")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            ForEach(Quest3CompatibilityProfile.features) { feature in
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(feature.id.replacingOccurrences(of: "-", with: " ").capitalized)
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Text(feature.level.rawValue.uppercased())
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(levelColor(feature.level))
+                    }
+                    Text(feature.questAPI)
+                        .font(.caption2.monospaced())
+                        .foregroundStyle(.cyan.opacity(0.9))
+                        .textSelection(.enabled)
+                    Text(feature.note)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.vertical, 5)
+                if feature.id != Quest3CompatibilityProfile.features.last?.id {
+                    Divider().overlay(.white.opacity(0.08))
+                }
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
     }
 
-    private func vectorRow(_ label: String, _ value: Float) -> some View {
-        HStack {
-            Text(label).foregroundStyle(.secondary)
-            Spacer()
-            Text(String(format: "% .5f", value))
-                .monospacedDigit()
-                .monospaced()
+    private func levelColor(_ level: Quest3FeatureLevel) -> Color {
+        switch level {
+        case .mapped: return .green
+        case .partial: return .orange
+        case .unavailable: return .red
         }
-        .font(.system(.body, design: .monospaced))
-    }
-
-    private func diagnostic(_ label: String, _ value: String) -> some View {
-        HStack {
-            Text(label).foregroundStyle(.secondary)
-            Spacer()
-            Text(value).monospaced()
-        }
-        .font(.footnote)
     }
 }
