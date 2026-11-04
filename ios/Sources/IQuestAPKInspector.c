@@ -185,7 +185,7 @@ int iquest_apk_inspect(const char *path, char *output, size_t output_capacity,
     char libs[MAX_APK_LIBS][MAX_APK_NAME]; unsigned lib_count = 0, assets = 0;
     unsigned char *manifest = NULL;
     uint32_t manifest_comp=0, manifest_uncomp=0, manifest_off=0;
-    uint16_t manifest_method=0;
+    uint16_t manifest_method=0; int has_manifest=0;
     if (fseek(f, cd_off, SEEK_SET)) { fclose(f); seterr(error,error_capacity,"Invalid central directory"); return 1; }
     for (unsigned i = 0; i < entries; i++) {
         unsigned char h[46];
@@ -203,7 +203,7 @@ int iquest_apk_inspect(const char *path, char *output, size_t output_capacity,
         name[name_len] = 0;
         if (fseek(f, (long)extra_len + comment_len, SEEK_CUR)) break;
         if (!strcmp(name, "AndroidManifest.xml")) {
-            manifest_comp=comp; manifest_uncomp=uncomp; manifest_off=off; manifest_method=method;
+            manifest_comp=comp; manifest_uncomp=uncomp; manifest_off=off; manifest_method=method; has_manifest=1;
         } else if (!strncmp(name, "lib/arm64-v8a/", 14) && strstr(name, ".so") &&
                    lib_count < MAX_APK_LIBS) {
             const char *base = strrchr(name, '/');
@@ -212,13 +212,13 @@ int iquest_apk_inspect(const char *path, char *output, size_t output_capacity,
             assets++;
         }
     }
-    if (manifest_off && manifest_uncomp && manifest_uncomp < 16*1024*1024)
+    if (has_manifest && manifest_uncomp && manifest_uncomp < 16*1024*1024)
         extract_manifest(f, manifest_off, manifest_method, manifest_comp, manifest_uncomp, &manifest);
     fclose(f);
     if (manifest) { parse_manifest(manifest, manifest_uncomp, package, sizeof package, version, sizeof version); free(manifest); }
     size_t used=0;
     if (append(output,output_capacity,&used,"package=%s\nversion=%s\nfile_bytes=%ld\narm64_library_count=%u\nasset_file_count=%u\nmanifest=%s\n",
-               *package?package:"(unreadable)",*version?version:"(not set)",file_size,lib_count,assets,manifest_off?"present":"missing")) {
+               *package?package:"(unreadable)",*version?version:"(not set)",file_size,lib_count,assets,has_manifest?"present":"missing")) {
         seterr(error,error_capacity,"Report buffer too small"); return 1;
     }
     for (unsigned i=0;i<lib_count;i++)
