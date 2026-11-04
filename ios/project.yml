@@ -43,6 +43,7 @@ targets:
           - "$(SRCROOT)/../runtime/guest"
           - "$(SRCROOT)/../visionos/Sources"
         OTHER_CFLAGS: "$(inherited) -Wno-unused-parameter"
+        OTHER_ASFLAGS: "$(inherited) -I$(SRCROOT)/.."
         CODE_SIGN_STYLE: Automatic
         SWIFT_STRICT_CONCURRENCY: minimal
     dependencies:
