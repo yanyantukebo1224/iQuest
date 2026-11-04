@@ -2,93 +2,122 @@ import SwiftUI
 
 struct TrackingDashboard: View {
     @StateObject private var tracking = ARTrackingModel()
+    @StateObject private var controller = ControllerInputModel()
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("iQuest 16e")
-                            .font(.largeTitle.bold())
-                        Text("Native ARKit tracking proof of concept")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
+        ZStack {
+            ARPassthroughView(session: tracking.session)
+                .ignoresSafeArea()
 
-                    HStack(spacing: 10) {
-                        Circle()
-                            .fill(tracking.status.contains("normal") ? .green : .orange)
-                            .frame(width: 10, height: 10)
-                        Text(tracking.status)
-                            .font(.headline)
+            VStack(spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("iQuest").font(.title.bold())
+                        Text("MR · HAND TRACKING · QUEST RUNTIME")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.cyan)
                     }
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
-
-                    GroupBox("6DoF pose — camera in AR world") {
-                        VStack(alignment: .leading, spacing: 10) {
-                            vectorRow("X", tracking.position.x)
-                            vectorRow("Y", tracking.position.y)
-                            vectorRow("Z", tracking.position.z)
-                            Divider()
-                            vectorRow("Quaternion X", tracking.orientation.vector.x)
-                            vectorRow("Quaternion Y", tracking.orientation.vector.y)
-                            vectorRow("Quaternion Z", tracking.orientation.vector.z)
-                            vectorRow("Quaternion W", tracking.orientation.vector.w)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-
-                    GroupBox("Runtime diagnostics") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            diagnostic("AR frames", "\(tracking.frameCount)")
-                            diagnostic("Last AR timestamp", String(format: "%.3f s", tracking.lastFrameTime))
-                            diagnostic("Device target", "iPhone 16e / arm64")
-                            diagnostic("JIT", "Not required by this prototype")
-                        }
-                    }
-
-                    HStack {
-                        Button(tracking.isRunning ? "Pause tracking" : "Start tracking") {
-                            tracking.isRunning ? tracking.stop() : tracking.start()
-                        }
-                        .buttonStyle(.borderedProminent)
-                        Button("Reset") { tracking.reset() }
-                            .buttonStyle(.bordered)
-                    }
-
-                    Text("This milestone verifies ARKit world tracking only. It does not yet load Android APKs, run Quest games, provide stereo VR output, or implement OpenXR/OVRP compatibility.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Circle()
+                        .fill(tracking.status.contains("normal") ? .green : .orange)
+                        .frame(width: 9, height: 9)
+                    Text(tracking.status)
+                        .font(.caption.weight(.medium))
+                        .lineLimit(1)
                 }
-                .padding()
+                .padding(12)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+
+                HStack(alignment: .top, spacing: 12) {
+                    handPanel
+                    controllerPanel
+                }
+
+                Spacer()
+
+                HStack {
+                    Text("MR PASSTHROUGH ACTIVE")
+                        .font(.caption2.bold())
+                        .foregroundStyle(.cyan)
+                    Spacer()
+                    Text("AR frames: \(tracking.frameCount)")
+                        .font(.caption2.monospacedDigit())
+                }
+                .padding(12)
+                .background(.ultraThinMaterial, in: Capsule())
             }
-            .navigationTitle("iQuest")
-            .navigationBarTitleDisplayMode(.inline)
-            .onAppear { tracking.start() }
-            .onDisappear { tracking.stop() }
+            .padding()
         }
         .preferredColorScheme(.dark)
+        .onAppear { tracking.start() }
+        .onDisappear { tracking.stop() }
     }
 
-    private func vectorRow(_ label: String, _ value: Float) -> some View {
-        HStack {
-            Text(label).foregroundStyle(.secondary)
-            Spacer()
-            Text(String(format: "% .5f", value))
-                .monospacedDigit()
-                .monospaced()
+    private var handPanel: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("3D Finger Tracking", systemImage: "hand.draw")
+                .font(.headline)
+            Text(tracking.handStatus)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if tracking.hands.isEmpty {
+                Text("Show your hands to the rear camera")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(tracking.hands) { hand in
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack {
+                            Text(hand.chirality)
+                            Spacer()
+                            Text("\(Int(hand.confidence * 100))%")
+                        }
+                        .font(.caption.bold())
+                        Text("\(hand.joints.count)/21 joints")
+                            .font(.caption2.monospaced())
+                        if let wrist = hand.joints["wrist"] {
+                            Text(String(format: "Wrist %.2f / %.2f / %.2f m", wrist.x, wrist.y, wrist.z))
+                                .font(.system(size: 9, design: .monospaced))
+                        }
+                    }
+                }
+            }
         }
-        .font(.system(.body, design: .monospaced))
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
 
-    private func diagnostic(_ label: String, _ value: String) -> some View {
-        HStack {
-            Text(label).foregroundStyle(.secondary)
-            Spacer()
-            Text(value).monospaced()
+    private var controllerPanel: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Controller Bridge", systemImage: "gamecontroller")
+                .font(.headline)
+            Text(controller.status)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(controller.controllerName)
+                .font(.caption.bold())
+            stickRow("Left stick", controller.leftStick)
+            stickRow("Right stick", controller.rightStick)
+            Text(controller.pressedButtons.sorted().joined(separator: " · ").isEmpty
+                 ? "No buttons pressed"
+                 : controller.pressedButtons.sorted().joined(separator: " · "))
+                .font(.caption2.monospaced())
+                .lineLimit(3)
+            Text("Controller IMU intentionally unused")
+                .font(.caption2)
+                .foregroundStyle(.cyan)
         }
-        .font(.footnote)
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func stickRow(_ label: String, _ value: SIMD2<Float>) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).font(.caption2).foregroundStyle(.secondary)
+            Text(String(format: "X %+.2f  Y %+.2f", value.x, value.y))
+                .font(.system(size: 10, design: .monospaced))
+        }
     }
 }
