@@ -20,13 +20,18 @@
 // to pass on a bare checkout. 3.4 MB is the price of that.
 //
 // .incbin, not a generated C table, because 3.6 MB of HRIR data as string
-// literals is a 20 MB source file that every test binary in `make check`
-// would have to parse; the assembler swallows it in milliseconds. The path is
-// relative to the repo root, where make runs.
+// literals is a 20 MB source file that every test binary in `make check` would
+// have to parse; the assembler swallows it in milliseconds. The path is
+// relative to the repo root, where make runs. Xcode's iOS target builds from
+// ios/, so use the corresponding relative path there.
 .section __DATA,__const
 .globl _kl_phonon_hrtf_sofa
 .globl _kl_phonon_hrtf_sofa_end
 .align 4
 _kl_phonon_hrtf_sofa:
+#ifdef IQUEST_IOS_BUILD
+.incbin "../runtime/data/phonon_hrtf_cipic_124.sofa"
+#else
 .incbin "runtime/data/phonon_hrtf_cipic_124.sofa"
+#endif
 _kl_phonon_hrtf_sofa_end:
