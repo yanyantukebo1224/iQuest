@@ -1294,11 +1294,11 @@ ios-verify-ipa:
 	@unzip -t "$(IOS_IPA)" >/dev/null
 	@unzip -Z1 "$(IOS_IPA)" | grep -qx 'Payload/iQuest.app/Info.plist'
 	@PLIST="$(IOS_APP)/Info.plist"; \
-	  EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$PLIST") || exit 1; \
-	  test -f "$(IOS_APP)/$EXECUTABLE" || { echo "missing app executable: $EXECUTABLE"; exit 1; }; \
-	  PLATFORM=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$PLIST") || exit 1; \
-	  test "$PLATFORM" = "iPhoneOS" || { echo "wrong platform: $PLATFORM"; exit 1; }; \
-	  ARCHS=$(/usr/bin/lipo -archs "$(IOS_APP)/$EXECUTABLE") || exit 1; \
-	  echo "  IPA executable architectures: $ARCHS"; \
-	  echo "$ARCHS" | tr ' ' '\\n' | grep -qx arm64 || { echo "missing arm64 device slice"; exit 1; }
+	  EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$$PLIST") || exit 1; \
+	  test -f "$(IOS_APP)/$$EXECUTABLE" || { echo "missing app executable: $$EXECUTABLE"; exit 1; }; \
+	  PLATFORM=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$$PLIST") || exit 1; \
+	  test "$$PLATFORM" = "iPhoneOS" || { echo "wrong platform: $$PLATFORM"; exit 1; }; \
+	  ARCHS=$(/usr/bin/lipo -archs "$(IOS_APP)/$$EXECUTABLE") || exit 1; \
+	  echo "  IPA executable architectures: $$ARCHS"; \
+	  echo "$$ARCHS" | tr ' ' '\\n' | grep -qx arm64 || { echo "missing arm64 device slice"; exit 1; }
 	@echo "  verified unsigned iPhone IPA: $(IOS_IPA)"
