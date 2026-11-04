@@ -1261,7 +1261,7 @@ trace: build/t_trace
 
 ios-project:
 	@command -v xcodegen >/dev/null || { echo "xcodegen is required: brew install xcodegen"; exit 1; }
-	xcodegen generate --spec ios/project.yml --project ios/iQuest.xcodeproj
+	xcodegen generate --spec ios/project.yml --project ios
 
 ios: ios-project
 	xcodebuild -project ios/iQuest.xcodeproj -scheme iQuest -sdk iphoneos \
