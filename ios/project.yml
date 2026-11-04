@@ -22,6 +22,7 @@ targets:
           - data/**
           - gfx/kl_view.c
           - gfx/kl_view_mtl.m
+      - path: ../runtime/diag/kl_mprobe.c
       - path: ../visionos/Sources/kl_app.c
     settings:
       base:
@@ -41,6 +42,7 @@ targets:
           - "$(SRCROOT)/../runtime/xr"
           - "$(SRCROOT)/../runtime/media"
           - "$(SRCROOT)/../runtime/guest"
+          - "$(SRCROOT)/../runtime/diag"
           - "$(SRCROOT)/../visionos/Sources"
         OTHER_CFLAGS: "$(inherited) -Wno-unused-parameter -DIQUEST_IOS_BUILD=1"
         CODE_SIGN_STYLE: Automatic
