@@ -8,56 +8,42 @@ final class GameLibraryModel: ObservableObject {
 
     private var importedFileURL: URL?
 
-    func importAPK(_ result: Result<[URL], Error>) {
-        switch result {
-        case .failure(let error):
-            status = "Import failed: \(error.localizedDescription)"
+    func statusMessage(_ message: String) {
+        status = message
+    }
 
-        case .success(let urls):
-            guard let sourceURL = urls.first else {
-                status = "No file was selected."
-                return
-            }
+    func importAPK(from sourceURL: URL) {
+        guard sourceURL.pathExtension.lowercased() == "apk" else {
+            status = "Not an APK: \(sourceURL.lastPathComponent)"
+            return
+        }
 
-            guard sourceURL.pathExtension.lowercased() == "apk" else {
-                status = "The selected file is not an APK (\(sourceURL.lastPathComponent))."
-                return
-            }
+        do {
+            let fileManager = FileManager.default
+            let supportDirectory = try fileManager.url(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: true
+            )
+            let importDirectory = supportDirectory.appendingPathComponent("ImportedAPKs", isDirectory: true)
+            try fileManager.createDirectory(
+                at: importDirectory,
+                withIntermediateDirectories: true
+            )
 
-            let didStartAccessing = sourceURL.startAccessingSecurityScopedResource()
-            defer {
-                if didStartAccessing {
-                    sourceURL.stopAccessingSecurityScopedResource()
-                }
-            }
+            let destinationURL = importDirectory.appendingPathComponent(
+                UUID().uuidString + "-" + sourceURL.lastPathComponent,
+                isDirectory: false
+            )
+            try fileManager.copyItem(at: sourceURL, to: destinationURL)
 
-            do {
-                let fileManager = FileManager.default
-                let supportDirectory = try fileManager.url(
-                    for: .applicationSupportDirectory,
-                    in: .userDomainMask,
-                    appropriateFor: nil,
-                    create: true
-                )
-                let importDirectory = supportDirectory.appendingPathComponent("ImportedAPKs", isDirectory: true)
-                try fileManager.createDirectory(
-                    at: importDirectory,
-                    withIntermediateDirectories: true
-                )
-
-                let destinationURL = importDirectory.appendingPathComponent(
-                    UUID().uuidString + "-" + sourceURL.lastPathComponent,
-                    isDirectory: false
-                )
-                try fileManager.copyItem(at: sourceURL, to: destinationURL)
-
-                removeImportedFile()
-                importedFileURL = destinationURL
-                selectedAPK = destinationURL
-                status = "Imported successfully: \(sourceURL.lastPathComponent)"
-            } catch {
-                status = "Could not copy APK: \(error.localizedDescription)"
-            }
+            removeImportedFile()
+            importedFileURL = destinationURL
+            selectedAPK = destinationURL
+            status = "Imported successfully: \(sourceURL.lastPathComponent)"
+        } catch {
+            status = "Could not import APK: \(error.localizedDescription)"
         }
     }
 
