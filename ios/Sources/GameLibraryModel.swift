@@ -4,6 +4,7 @@ import Combine
 @MainActor
 final class GameLibraryModel: ObservableObject {
     @Published private(set) var selectedAPK: URL?
+    @Published private(set) var inspection: APKInspection?
     @Published private(set) var status = "Import a Quest APK to add it to your library."
 
     private var importedFileURL: URL?
@@ -38,29 +39,46 @@ final class GameLibraryModel: ObservableObject {
             )
             try fileManager.copyItem(at: sourceURL, to: destinationURL)
 
+            let metadata = try APKInspection.read(from: destinationURL)
             removeImportedFile()
             importedFileURL = destinationURL
             selectedAPK = destinationURL
-            status = "Imported successfully: \(sourceURL.lastPathComponent)"
+            inspection = metadata
+            status = "Imported and inspected: \(sourceURL.lastPathComponent)"
         } catch {
-            status = "Could not import APK: \(error.localizedDescription)"
+            status = "APK import/inspection failed: \(error.localizedDescription)"
         }
     }
 
     func clearSelection() {
         removeImportedFile()
         selectedAPK = nil
+        inspection = nil
         status = "Import a Quest APK to add it to your library."
     }
 
     func requestLaunch() {
-        guard selectedAPK != nil else {
-            status = "Select an APK first."
+        guard let selectedAPK, let inspection else {
+            status = "Select and inspect an APK first."
             return
         }
-        // Deliberately do not simulate a successful launch. The iOS target
-        // does not yet link the Klepton guest lifecycle/graphics runtime.
-        status = "Cannot launch yet: the Klepton iOS guest runtime is not linked."
+        let frameworks = Bundle.main.privateFrameworksURL
+        let missing = inspection.missingTranslatedLibraries(in: frameworks)
+        if let entry = inspection.entryLibrary,
+           missing.contains(entry) {
+            status = "Cannot launch: \(entry) has no pretranslated, signed iOS framework in this IPA. APK import alone cannot provide executable code on iOS."
+            return
+        }
+        if inspection.entryLibrary == nil {
+            status = "Cannot launch: no supported native entry library was identified in this APK."
+            return
+        }
+        if !missing.isEmpty {
+            status = "Cannot launch: \(missing.count) native libraries still need pretranslation and signing (for example \(missing.prefix(3).joined(separator: ", ")))."
+            return
+        }
+        status = "Native libraries are present. The iOS guest lifecycle and stereo compositor still need to be connected before this title can start."
+        _ = selectedAPK
     }
 
     private func removeImportedFile() {
