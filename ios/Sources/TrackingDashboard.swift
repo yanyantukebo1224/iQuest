@@ -152,6 +152,8 @@ struct GameLauncherView: View {
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22))
 
+                    Quest3CompatibilitySection()
+
                     HStack {
                         Text("LOCAL ONLY")
                         Spacer()
@@ -175,6 +177,61 @@ struct GameLauncherView: View {
                 onCancel: { library.statusMessage("File selection cancelled.") }
             )
             .frame(width: 1, height: 1)
+        }
+    }
+}
+
+
+private struct Quest3CompatibilitySection: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label("Quest 3 API compatibility", systemImage: "arkit")
+                    .font(.headline)
+                Spacer()
+                Text(Quest3CompatibilityProfile.summary)
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.secondary)
+            }
+            Text("Host capability map · not a Meta Quest runtime")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            ForEach(Quest3CompatibilityProfile.features) { feature in
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(feature.id.replacingOccurrences(of: "-", with: " ").capitalized)
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Text(feature.level.rawValue.uppercased())
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(levelColor(feature.level))
+                    }
+                    Text(feature.questAPI)
+                        .font(.caption2.monospaced())
+                        .foregroundStyle(.cyan.opacity(0.9))
+                        .textSelection(.enabled)
+                    Text(feature.note)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.vertical, 5)
+                if feature.id != Quest3CompatibilityProfile.features.last?.id {
+                    Divider().overlay(.white.opacity(0.08))
+                }
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+    }
+
+    private func levelColor(_ level: Quest3FeatureLevel) -> Color {
+        switch level {
+        case .mapped: return .green
+        case .partial: return .orange
+        case .unavailable: return .red
         }
     }
 }
